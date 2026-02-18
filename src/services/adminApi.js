@@ -11,7 +11,7 @@ const createFetchJson = (onUnauthorized) => {
       },
     })
 
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
       if (onUnauthorized) onUnauthorized()
       throw new Error('Unauthorized')
     }

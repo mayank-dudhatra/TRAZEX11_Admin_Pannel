@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import PresetCard from '../common/PresetCard'
+import { contestPresets } from '../../constants/contestPresets'
 
 const defaultPrizeRange = { rankFrom: '', rankTo: '', prizeEach: '' }
 
@@ -9,6 +11,7 @@ const CreateContest = ({ onCreate, onLoadDateContests }) => {
   const [loadingDates, setLoadingDates] = useState(false)
   const [dateError, setDateError] = useState('')
   const [selectedDateContestId, setSelectedDateContestId] = useState('')
+  const [selectedPresetLabel, setSelectedPresetLabel] = useState('')
   const [form, setForm] = useState({
     name: '',
     contestStartTime: '',
@@ -60,6 +63,20 @@ const CreateContest = ({ onCreate, onLoadDateContests }) => {
     return { entryCloseDateTime, startDateTime, endDateTime }
   }, [form.entryCloseTime, form.contestStartTime, form.contestEndTime])
 
+  const totalDistributedPrize = useMemo(
+    () =>
+      prizeBreakup.reduce((sum, range) => {
+        const rankFrom = Number(range.rankFrom)
+        const rankTo = Number(range.rankTo)
+        const prizeEach = Number(range.prizeEach)
+        if (Number.isNaN(rankFrom) || Number.isNaN(rankTo) || Number.isNaN(prizeEach) || rankTo < rankFrom) {
+          return sum
+        }
+        return sum + (rankTo - rankFrom + 1) * prizeEach
+      }, 0),
+    [prizeBreakup],
+  )
+
   const handleFieldChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
@@ -76,6 +93,36 @@ const CreateContest = ({ onCreate, onLoadDateContests }) => {
 
   const removePrizeRange = (index) => {
     setPrizeBreakup((prev) => prev.filter((_, idx) => idx !== index))
+  }
+
+  const applyPreset = (preset) => {
+    setSelectedPresetLabel(preset.label)
+    setForm((prev) => ({
+      ...prev,
+      entryFee: preset.entryFee,
+      totalSpots: preset.totalSpots,
+      maximumTeamPerUser: preset.maximumTeamPerUser,
+      prizePool: preset.prizePool,
+    }))
+    setPrizeBreakup(
+      preset.prizeBreakup.map((range) => ({
+        rankFrom: range.rankFrom,
+        rankTo: range.rankTo,
+        prizeEach: range.prizeEach,
+      })),
+    )
+  }
+
+  const clearPreset = () => {
+    setSelectedPresetLabel('')
+    setForm((prev) => ({
+      ...prev,
+      entryFee: '',
+      totalSpots: '',
+      maximumTeamPerUser: '',
+      prizePool: '',
+    }))
+    setPrizeBreakup([{ ...defaultPrizeRange }])
   }
 
   const getDateContestLabel = (contest) => {
@@ -125,6 +172,10 @@ const CreateContest = ({ onCreate, onLoadDateContests }) => {
       if (Number.isNaN(prizeEach) || prizeEach < 0) {
         return `Prize range ${index + 1} has invalid prize each value.`
       }
+    }
+
+    if (Number(form.prizePool) !== totalDistributedPrize) {
+      return `Prize pool (₹${Number(form.prizePool)}) must match total distributed prize (₹${totalDistributedPrize}).`
     }
 
     return ''
@@ -182,6 +233,7 @@ const CreateContest = ({ onCreate, onLoadDateContests }) => {
         prizePool: '',
       })
       setPrizeBreakup([{ ...defaultPrizeRange }])
+      setSelectedPresetLabel('')
     } catch (submitError) {
       setError(submitError?.message || 'Failed to create contest.')
     } finally {
@@ -199,6 +251,29 @@ const CreateContest = ({ onCreate, onLoadDateContests }) => {
       </div>
 
       <form className="mt-6 flex flex-col gap-6" onSubmit={handleSubmit}>
+        <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-white/70">Contest Presets</h3>
+            <button
+              type="button"
+              onClick={clearPreset}
+              className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/70 transition hover:border-white/40 hover:text-white"
+            >
+              Clear Preset
+            </button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {contestPresets.map((preset) => (
+              <PresetCard
+                key={preset.label}
+                preset={preset}
+                selected={selectedPresetLabel === preset.label}
+                onSelect={() => applyPreset(preset)}
+              />
+            ))}
+          </div>
+        </div>
+
         <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-white/70">Date Contest</h3>
           <div className="grid gap-4">
@@ -440,6 +515,22 @@ const CreateContest = ({ onCreate, onLoadDateContests }) => {
                   </div>
                 </div>
               )})}
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/70">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>Total Distributed Prize</span>
+                <span className="font-semibold text-white">₹{totalDistributedPrize}</span>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                <span>Prize Pool</span>
+                <span className="font-semibold text-white">₹{form.prizePool === '' ? 0 : Number(form.prizePool)}</span>
+              </div>
+              {form.prizePool !== '' && Number(form.prizePool) !== totalDistributedPrize && (
+                <p className="mt-2 text-xs text-amber-300">
+                  Prize pool and distributed total do not match.
+                </p>
+              )}
             </div>
           </div>
         </div>
