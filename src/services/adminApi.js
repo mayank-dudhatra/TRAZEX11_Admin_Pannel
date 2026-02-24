@@ -1,8 +1,11 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+const API_BASE = import.meta.env.VITE_API_URL
+const API_PREFIX = '/api'
+
+const buildApiUrl = (path) => `${API_BASE}${API_PREFIX}${path}`
 
 const createFetchJson = (onUnauthorized) => {
   return async (path, options = {}) => {
-    const response = await fetch(`${API_BASE}${path}`, {
+    const response = await fetch(buildApiUrl(path), {
       ...options,
       credentials: 'include', // Include cookies automatically
       headers: {
@@ -30,7 +33,7 @@ const createAdminApi = ({ onUnauthorized }) => {
 
   return {
     login: async (payload) => {
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetch(buildApiUrl('/auth/login'), {
         method: 'POST',
         credentials: 'include', // Include cookies
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +48,7 @@ const createAdminApi = ({ onUnauthorized }) => {
       return response.json()
     },
     logout: async () => {
-      const response = await fetch(`${API_BASE}/auth/logout`, {
+      const response = await fetch(buildApiUrl('/auth/logout'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
