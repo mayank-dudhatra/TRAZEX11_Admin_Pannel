@@ -3,15 +3,22 @@ const API_PREFIX = '/api'
 
 const buildApiUrl = (path) => `${API_BASE}${API_PREFIX}${path}`
 
+const createAuthHeaders = (headers = {}) => {
+  const token = localStorage.getItem('token')
+
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  }
+}
+
 const createFetchJson = (onUnauthorized) => {
   return async (path, options = {}) => {
     const response = await fetch(buildApiUrl(path), {
       ...options,
       credentials: 'include', // Include cookies automatically
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {}),
-      },
+      headers: createAuthHeaders(options.headers || {}),
     })
 
     if (response.status === 401 || response.status === 403) {
@@ -36,7 +43,7 @@ const createAdminApi = ({ onUnauthorized }) => {
       const response = await fetch(buildApiUrl('/auth/login'), {
         method: 'POST',
         credentials: 'include', // Include cookies
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
         body: JSON.stringify(payload),
       })
 
@@ -51,7 +58,7 @@ const createAdminApi = ({ onUnauthorized }) => {
       const response = await fetch(buildApiUrl('/auth/logout'), {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
       })
 
       if (!response.ok) {

@@ -54,6 +54,7 @@ function App() {
   )
 
   const handleUnauthorized = useCallback(() => {
+    localStorage.removeItem('token')
     setIsAuthenticated(false)
     setAuthError('Session expired. Please sign in again.')
   }, [])
@@ -241,7 +242,10 @@ function App() {
       if (data.user?.role !== 'admin') {
         throw new Error('Admin access required')
       }
-      // Token is now in httpOnly cookie, no need to save it
+      const token = data?.token || data?.data?.token || ''
+      if (token) {
+        localStorage.setItem('token', token)
+      }
       setIsAuthenticated(true)
     } catch (error) {
       setAuthError('Invalid admin credentials.')
@@ -257,6 +261,7 @@ function App() {
     } catch (error) {
       // Logout on server might fail, but clear client state anyway
     } finally {
+      localStorage.removeItem('token')
       setIsAuthenticated(false)
       setSelectedUser(null)
     }
